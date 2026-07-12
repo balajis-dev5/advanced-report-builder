@@ -40,28 +40,44 @@ I build reporting systems professionally for an enterprise CRM. This project is 
 | Charts | Chart.js | Lightweight, covers all 9 chart types |
 | DB | PostgreSQL 16 | Window functions + rich aggregates for matrix reports; runs on SQLite locally for zero-setup dev |
 
+## Project status
+
+**Under active construction, shipped in vertical slices.** Each slice is a
+working, end-to-end increment.
+
+- ✅ **Slice 1 — Foundation & auth:** Laravel 12 API, JWT auth, React 19 app
+  shell, protected dashboard, seeded demo login. *(current)*
+- 🚧 **Slice 2 — Report engine core:** report definition → SQL compiler;
+  detail / summary / matrix reports.
+- ⏳ Slices 3–6 — visual builder, charts, export/scheduling/sharing, polish.
+
+The design sections below (report definition, API surface, schema, folder
+layout) describe the **target architecture** the slices build toward.
+
 ## Quick start
 
+Runs locally with **SQLite** out of the box — no database server or Docker
+required. PostgreSQL is the production target (see `.env.example`).
+
 ```bash
-# API
+# API  (terminal 1)
 cd api
-cp .env.example .env        # set DB credentials
+cp .env.example .env
 composer install
 php artisan key:generate
-php artisan migrate --seed  # seeds demo CRM data: 50k leads, 10k deals
-php artisan serve           # http://localhost:8000
+php artisan jwt:secret
+touch database/database.sqlite
+php artisan migrate --seed   # creates tables + demo user
+php artisan serve --port=8001 # http://127.0.0.1:8001
 
-# Worker + scheduler (separate terminals)
-php artisan queue:work
-php artisan schedule:work
-
-# Frontend
-cd ../web
+# Frontend  (terminal 2)
+cd web
+cp .env.example .env
 npm install
-npm run dev                 # http://localhost:5173
+npm run dev                   # http://localhost:5173
 ```
 
-Demo login: `demo@example.com` / `password`
+Demo login: `demo@arb.test` / `password`
 
 ## Report definition (the contract everything compiles from)
 
@@ -93,18 +109,23 @@ Demo login: `demo@example.com` / `password`
 }
 ```
 
-## API overview (full spec in `docs/api.md` once generated)
+## API overview
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/v1/auth/login` | JWT login |
-| GET | `/api/v1/modules` | Reportable modules + field metadata |
-| POST | `/api/v1/reports/preview` | Run a definition without saving (paginated) |
-| POST | `/api/v1/reports` | Save report |
-| GET | `/api/v1/reports/{id}/run` | Execute saved report |
-| POST | `/api/v1/reports/{id}/export` | Queue Excel/CSV/PDF export |
-| POST | `/api/v1/reports/{id}/schedules` | Create schedule (freq, time, recipients) |
-| POST | `/api/v1/reports/{id}/share` | Share with user/role + permission |
+Built in Slice 1 (✅) and the target surface for later slices (⏳):
+
+| Status | Method | Endpoint | Purpose |
+|---|---|---|---|
+| ✅ | GET | `/api/health` | Service health check |
+| ✅ | POST | `/api/auth/register` | Create account, returns JWT |
+| ✅ | POST | `/api/auth/login` | JWT login |
+| ✅ | GET | `/api/auth/me` | Current user (auth required) |
+| ✅ | POST | `/api/auth/logout` · `/api/auth/refresh` | Invalidate / refresh token |
+| ⏳ | GET | `/api/modules` | Reportable modules + field metadata |
+| ⏳ | POST | `/api/reports/preview` | Run a definition without saving (paginated) |
+| ⏳ | POST | `/api/reports` · GET `/api/reports/{id}/run` | Save / execute reports |
+| ⏳ | POST | `/api/reports/{id}/export` | Queue Excel/CSV/PDF export |
+| ⏳ | POST | `/api/reports/{id}/schedules` | Create schedule (freq, time, recipients) |
+| ⏳ | POST | `/api/reports/{id}/share` | Share with user/role + permission |
 
 ## Database schema (core tables)
 
@@ -150,7 +171,10 @@ erDiagram
     }
 ```
 
-Demo CRM tables (`leads`, `deals`, `activities`, `users`) ship with seeders so reports have real data shapes to run against.
+> The `reports`, `report_schedules`, `report_shares` and `report_exports` tables
+> above are the target schema introduced from Slice 2 onward. Slice 1 ships the
+> `users` table and a seeded demo account; demo CRM tables (`leads`, `deals`,
+> `activities`) arrive with the report engine so reports have real data to run against.
 
 ## Folder structure
 
@@ -187,12 +211,12 @@ advanced-report-builder/
 
 ## Roadmap
 
-- [x] v0.1 — detail reports + filter engine
-- [x] v0.2 — summary reports, aggregates, charts
-- [ ] v0.3 — matrix reports, exports
-- [ ] v0.4 — scheduling + email delivery
-- [ ] v1.0 — sharing/RBAC, demo deployment, docs site
-- [ ] v1.1 — PostgreSQL driver, dashboard widget embeds
+- [x] Slice 1 — foundation: Laravel 12 API, JWT auth, React app shell, dashboard
+- [ ] Slice 2 — report definition + SQL compiler; detail / summary / matrix reports
+- [ ] Slice 3 — visual builder: field picker, filter tree, group-by, saved reports
+- [ ] Slice 4 — charts + dashboard widgets
+- [ ] Slice 5 — CSV / Excel / PDF export, scheduling, sharing & RBAC
+- [ ] Slice 6 — tests, screenshots, Docker deployment, docs site
 
 ## License
 
