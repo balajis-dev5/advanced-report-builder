@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode: `dark:` utilities apply when a `.dark` ancestor exists.
+   The inline script in index.html sets `.dark` before first paint to avoid a flash. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
