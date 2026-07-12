@@ -46,10 +46,13 @@ I build reporting systems professionally for an enterprise CRM. This project is 
 working, end-to-end increment.
 
 - ✅ **Slice 1 — Foundation & auth:** Laravel 12 API, JWT auth, React 19 app
-  shell, protected dashboard, seeded demo login. *(current)*
-- 🚧 **Slice 2 — Report engine core:** report definition → SQL compiler;
-  detail / summary / matrix reports.
-- ⏳ Slices 3–6 — visual builder, charts, export/scheduling/sharing, polish.
+  shell, protected dashboard, seeded demo login.
+- ✅ **Slice 2 — Report engine core:** declarative definition → validated SQL
+  compiler with a whitelist-based data-source registry; detail / summary /
+  matrix (pivot) reports; filters, sorting & saved reports; a form-based builder
+  UI with live preview. Feature-tested end to end. *(current)*
+- 🚧 **Slice 3 — Visual builder:** drag & drop fields, richer filter tree, pivot UX.
+- ⏳ Slices 4–6 — charts, export/scheduling/sharing, polish.
 
 The design sections below (report definition, API surface, schema, folder
 layout) describe the **target architecture** the slices build toward.
@@ -111,7 +114,7 @@ Demo login: `demo@arb.test` / `password`
 
 ## API overview
 
-Built in Slice 1 (✅) and the target surface for later slices (⏳):
+Built in Slices 1–2 (✅) and the target surface for later slices (⏳):
 
 | Status | Method | Endpoint | Purpose |
 |---|---|---|---|
@@ -120,9 +123,11 @@ Built in Slice 1 (✅) and the target surface for later slices (⏳):
 | ✅ | POST | `/api/auth/login` | JWT login |
 | ✅ | GET | `/api/auth/me` | Current user (auth required) |
 | ✅ | POST | `/api/auth/logout` · `/api/auth/refresh` | Invalidate / refresh token |
-| ⏳ | GET | `/api/modules` | Reportable modules + field metadata |
-| ⏳ | POST | `/api/reports/preview` | Run a definition without saving (paginated) |
-| ⏳ | POST | `/api/reports` · GET `/api/reports/{id}/run` | Save / execute reports |
+| ✅ | GET | `/api/data-sources` | Reportable sources + field metadata |
+| ✅ | POST | `/api/reports/run` | Run a definition without saving (live preview) |
+| ✅ | GET · POST | `/api/reports` | List / create saved reports |
+| ✅ | GET · PUT · DELETE | `/api/reports/{id}` | Show / update / delete a saved report |
+| ✅ | POST | `/api/reports/{id}/run` | Execute a saved report |
 | ⏳ | POST | `/api/reports/{id}/export` | Queue Excel/CSV/PDF export |
 | ⏳ | POST | `/api/reports/{id}/schedules` | Create schedule (freq, time, recipients) |
 | ⏳ | POST | `/api/reports/{id}/share` | Share with user/role + permission |
@@ -171,10 +176,12 @@ erDiagram
     }
 ```
 
-> The `reports`, `report_schedules`, `report_shares` and `report_exports` tables
-> above are the target schema introduced from Slice 2 onward. Slice 1 ships the
-> `users` table and a seeded demo account; demo CRM tables (`leads`, `deals`,
-> `activities`) arrive with the report engine so reports have real data to run against.
+> The `report_schedules`, `report_shares` and `report_exports` tables above are
+> **target** schema for Slices 4–5. As of Slice 2 the database ships `users`,
+> `reports` (saved definitions), and a seeded `deals` demo dataset (800 rows) —
+> a single, lightly denormalized fact table the report engine runs against.
+> Additional demo tables (`leads`, `activities`) will arrive as the data-source
+> registry grows.
 
 ## Folder structure
 
@@ -212,8 +219,9 @@ advanced-report-builder/
 ## Roadmap
 
 - [x] Slice 1 — foundation: Laravel 12 API, JWT auth, React app shell, dashboard
-- [ ] Slice 2 — report definition + SQL compiler; detail / summary / matrix reports
-- [ ] Slice 3 — visual builder: field picker, filter tree, group-by, saved reports
+- [x] Slice 2 — report definition + validated SQL compiler; detail / summary / matrix
+      reports; filters, sorting, saved reports; form-based builder with live preview
+- [ ] Slice 3 — visual builder: drag & drop field picker, filter tree, pivot UX
 - [ ] Slice 4 — charts + dashboard widgets
 - [ ] Slice 5 — CSV / Excel / PDF export, scheduling, sharing & RBAC
 - [ ] Slice 6 — tests, screenshots, Docker deployment, docs site
