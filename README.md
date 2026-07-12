@@ -37,7 +37,7 @@ I build reporting systems professionally for an enterprise CRM. This project is 
 | Frontend | React 19, TypeScript, Vite | Typed report definitions shared client/server |
 | Data fetching | TanStack Query | Cache + invalidation for preview-as-you-build |
 | Forms | React Hook Form + Zod | The builder is one big form; Zod mirrors the server-side definition schema |
-| Charts | Chart.js | Lightweight, covers all 9 chart types |
+| Charts | Custom SVG components | Zero runtime dependency; theme-aware and accessible (bar / line / donut shipped) |
 | DB | PostgreSQL 16 | Window functions + rich aggregates for matrix reports; runs on SQLite locally for zero-setup dev |
 
 ## Project status
@@ -53,8 +53,11 @@ working, end-to-end increment.
   UI with live preview. Feature-tested end to end.
 - ✅ **Slice 3 — Visual builder:** drag & drop field palette with drop zones and
   compatibility highlighting (dnd-kit), click-to-add fallback for keyboard and
-  touch, live dashboard stats. *(current)*
-- ⏳ Slices 4–6 — charts, export/scheduling/sharing, richer filter tree, polish.
+  touch, live dashboard stats.
+- ✅ **Slice 4 — Charts & dashboards:** dependency-free SVG charts (bar, line,
+  donut) driven by any summary or matrix result, a Table/Chart toggle in the
+  builder, and live dashboard chart widgets. *(current)*
+- ⏳ Slices 5–6 — export/scheduling/sharing, richer filter tree, polish.
 
 The design sections below (report definition, API surface, schema, folder
 layout) describe the **target architecture** the slices build toward.
@@ -225,7 +228,8 @@ advanced-report-builder/
       reports; filters, sorting, saved reports; form-based builder with live preview
 - [x] Slice 3 — visual builder: drag & drop field palette + drop zones with
       compatibility highlighting, click-to-add fallback, live dashboard stats
-- [ ] Slice 4 — charts + dashboard widgets, richer filter tree
+- [x] Slice 4 — charts (bar / line / donut) on summary & matrix results, builder
+      chart toggle, live dashboard widgets
 - [ ] Slice 5 — CSV / Excel / PDF export, scheduling, sharing & RBAC
 - [ ] Slice 6 — tests, screenshots, Docker deployment, docs site
 
