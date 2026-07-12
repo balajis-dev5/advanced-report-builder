@@ -1,0 +1,24 @@
+# Root-level ignores for the advanced-report-builder monorepo.
+# api/ and web/ ship their own .gitignore for framework-specific paths.
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.swp
+
+# Env files (never commit real secrets — .env.example is the template)
+.env
+**/.env
+!**/.env.example
+
+# Dependencies / build output (belt-and-suspenders; sub-projects also ignore these)
+node_modules/
+web/dist/
+api/vendor/
+api/public/build/
+
+# Docker volumes
+.docker/data/
