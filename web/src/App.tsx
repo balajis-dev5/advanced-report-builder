@@ -6,6 +6,8 @@ import AppLayout from './components/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import ReportsPage from './pages/ReportsPage'
+import ReportBuilderPage from './pages/ReportBuilderPage'
 
 export default function App() {
   return (
@@ -22,6 +24,9 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/builder" element={<ReportBuilderPage />} />
+              <Route path="/builder/:id" element={<ReportBuilderPage />} />
             </Route>
           </Route>
 

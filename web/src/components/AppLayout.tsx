@@ -11,8 +11,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard' },
-  { label: 'Reports', soon: true },
-  { label: 'Data sources', soon: true },
+  { label: 'My reports', to: '/reports' },
+  { label: 'Report builder', to: '/builder' },
   { label: 'Schedules', soon: true },
   { label: 'Settings', soon: true },
 ]

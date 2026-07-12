@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 
 interface Stat {
@@ -31,13 +32,13 @@ const roadmap: RoadmapItem[] = [
     slice: 'Slice 2',
     title: 'Report engine core',
     detail: 'Report definition → safe SQL compiler; detail, summary & matrix reports.',
-    status: 'next',
+    status: 'done',
   },
   {
     slice: 'Slice 3',
     title: 'Visual builder',
     detail: 'Drag & drop fields, group-by, aggregates, saved reports, pivot view.',
-    status: 'planned',
+    status: 'next',
   },
   {
     slice: 'Slice 4',
@@ -64,14 +65,22 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Welcome back, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          This is your reporting workspace. Here&apos;s where your reports, data sources and
-          schedules will live.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Welcome back, {user?.name?.split(' ')[0]} 👋
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            This is your reporting workspace. Build a report against the demo dataset to see the
+            engine in action.
+          </p>
+        </div>
+        <Link
+          to="/builder"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+        >
+          + New report
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
