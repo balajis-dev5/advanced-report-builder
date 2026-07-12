@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -26,6 +27,11 @@ class DatabaseSeeder extends Seeder
         // A few extra users so lists and "shared with" pickers have data to show.
         if (User::count() < 6) {
             User::factory(5)->create();
+        }
+
+        // Demo reporting dataset (only seed once — the seeder is not idempotent).
+        if (DB::table('deals')->count() === 0) {
+            $this->call(DealSeeder::class);
         }
     }
 }

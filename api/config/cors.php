@@ -22,7 +22,12 @@ return [
         'http://localhost:5173,http://127.0.0.1:5173'
     ))),
 
-    'allowed_origins_patterns' => [],
+    // In local development the Vite dev server may land on any free port, so we
+    // allow any localhost/127.0.0.1 origin. Production relies solely on the
+    // explicit CORS_ALLOWED_ORIGINS list above.
+    'allowed_origins_patterns' => env('APP_ENV') === 'local'
+        ? ['#^http://(localhost|127\.0\.0\.1):\d+$#']
+        : [],
 
     'allowed_headers' => ['*'],
 
