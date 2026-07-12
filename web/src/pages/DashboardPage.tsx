@@ -1,18 +1,13 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { fetchDataSources, fetchReports } from '../lib/reports'
 
 interface Stat {
   label: string
   value: string
   hint: string
 }
-
-const stats: Stat[] = [
-  { label: 'Saved reports', value: '0', hint: 'Create your first report' },
-  { label: 'Data sources', value: '1', hint: 'Demo dataset seeded' },
-  { label: 'Scheduled deliveries', value: '0', hint: 'Email & export digests' },
-  { label: 'Shared with you', value: '0', hint: 'Reports from teammates' },
-]
 
 interface RoadmapItem {
   slice: string
@@ -38,13 +33,13 @@ const roadmap: RoadmapItem[] = [
     slice: 'Slice 3',
     title: 'Visual builder',
     detail: 'Drag & drop fields, group-by, aggregates, saved reports, pivot view.',
-    status: 'next',
+    status: 'done',
   },
   {
     slice: 'Slice 4',
     title: 'Charts & dashboards',
     detail: 'Bar, line, pie and more, with drill-down and dashboard widgets.',
-    status: 'planned',
+    status: 'next',
   },
   {
     slice: 'Slice 5',
@@ -62,6 +57,33 @@ const statusStyles: Record<RoadmapItem['status'], string> = {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const [reportCount, setReportCount] = useState<number | null>(null)
+  const [sourceCount, setSourceCount] = useState<number | null>(null)
+
+  // Live counts — the cards reflect the API, not hardcoded numbers.
+  useEffect(() => {
+    fetchReports()
+      .then((reports) => setReportCount(reports.length))
+      .catch(() => setReportCount(null))
+    fetchDataSources()
+      .then((sources) => setSourceCount(sources.length))
+      .catch(() => setSourceCount(null))
+  }, [])
+
+  const stats: Stat[] = [
+    {
+      label: 'Saved reports',
+      value: reportCount === null ? '—' : String(reportCount),
+      hint: reportCount ? 'In your library' : 'Create your first report',
+    },
+    {
+      label: 'Data sources',
+      value: sourceCount === null ? '—' : String(sourceCount),
+      hint: 'Demo dataset seeded',
+    },
+    { label: 'Scheduled deliveries', value: '0', hint: 'Coming in slice 5' },
+    { label: 'Shared with you', value: '0', hint: 'Coming in slice 5' },
+  ]
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">

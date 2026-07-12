@@ -50,9 +50,11 @@ working, end-to-end increment.
 - ✅ **Slice 2 — Report engine core:** declarative definition → validated SQL
   compiler with a whitelist-based data-source registry; detail / summary /
   matrix (pivot) reports; filters, sorting & saved reports; a form-based builder
-  UI with live preview. Feature-tested end to end. *(current)*
-- 🚧 **Slice 3 — Visual builder:** drag & drop fields, richer filter tree, pivot UX.
-- ⏳ Slices 4–6 — charts, export/scheduling/sharing, polish.
+  UI with live preview. Feature-tested end to end.
+- ✅ **Slice 3 — Visual builder:** drag & drop field palette with drop zones and
+  compatibility highlighting (dnd-kit), click-to-add fallback for keyboard and
+  touch, live dashboard stats. *(current)*
+- ⏳ Slices 4–6 — charts, export/scheduling/sharing, richer filter tree, polish.
 
 The design sections below (report definition, API surface, schema, folder
 layout) describe the **target architecture** the slices build toward.
@@ -221,8 +223,9 @@ advanced-report-builder/
 - [x] Slice 1 — foundation: Laravel 12 API, JWT auth, React app shell, dashboard
 - [x] Slice 2 — report definition + validated SQL compiler; detail / summary / matrix
       reports; filters, sorting, saved reports; form-based builder with live preview
-- [ ] Slice 3 — visual builder: drag & drop field picker, filter tree, pivot UX
-- [ ] Slice 4 — charts + dashboard widgets
+- [x] Slice 3 — visual builder: drag & drop field palette + drop zones with
+      compatibility highlighting, click-to-add fallback, live dashboard stats
+- [ ] Slice 4 — charts + dashboard widgets, richer filter tree
 - [ ] Slice 5 — CSV / Excel / PDF export, scheduling, sharing & RBAC
 - [ ] Slice 6 — tests, screenshots, Docker deployment, docs site
 

@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import Button from '../components/ui/Button'
 import Select from '../components/ui/Select'
 import TextField from '../components/ui/TextField'
-import FieldMultiSelect from '../components/reports/FieldMultiSelect'
+import DropZone, { FieldPill } from '../components/reports/DropZone'
+import FieldPalette, { type FieldDragData } from '../components/reports/FieldPalette'
 import FilterEditor from '../components/reports/FilterEditor'
 import MeasureEditor, { aggLabels } from '../components/reports/MeasureEditor'
 import ResultView from '../components/reports/ResultView'
@@ -16,6 +24,7 @@ import {
 } from '../lib/reports'
 import type {
   DataSource,
+  Field,
   Filter,
   Measure,
   ReportConfig,
@@ -60,6 +69,10 @@ export default function ReportBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
+  // A click on a palette chip must stay a click; dragging starts only after
+  // the pointer travels a little, so both interactions coexist on one element.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
   const source = useMemo(
     () => sources.find((s) => s.key === sourceKey),
     [sources, sourceKey],
@@ -70,6 +83,10 @@ export default function ReportBuilderPage() {
   )
   const measureFields = useMemo(
     () => source?.fields.filter((f) => f.type === 'measure') ?? [],
+    [source],
+  )
+  const fieldByKey = useMemo(
+    () => new Map((source?.fields ?? []).map((f) => [f.key, f])),
     [source],
   )
 
@@ -139,6 +156,63 @@ export default function ReportBuilderPage() {
     setMatrixMeasure(null)
     setFilters([])
     setResult(null)
+  }
+
+  /**
+   * Single routing point for a field entering a zone — used by both drag-drop
+   * and palette clicks, so the two interactions can never disagree.
+   */
+  function addField(zone: string, fieldKey: string, fieldType: 'dimension' | 'measure') {
+    if (zone === 'columns' && fieldKey !== '__count__') {
+      setColumns((c) => (c.includes(fieldKey) ? c : [...c, fieldKey]))
+    } else if (zone === 'groupBy' && fieldType === 'dimension') {
+      setGroupBy((g) => (g.includes(fieldKey) ? g : [...g, fieldKey]))
+    } else if (zone === 'measures' && fieldType === 'measure') {
+      const field = measureFields.find((f) => f.key === fieldKey)
+      if (field) setMeasures((m) => [...m, { field: field.key, agg: field.aggregations[0] }])
+    } else if (zone === 'matrixRow' && fieldType === 'dimension') {
+      if (matrixCol === fieldKey) setMatrixCol(matrixRow) // swap instead of duplicating
+      setMatrixRow(fieldKey)
+    } else if (zone === 'matrixCol' && fieldType === 'dimension') {
+      if (matrixRow === fieldKey) setMatrixRow(matrixCol)
+      setMatrixCol(fieldKey)
+    } else if (zone === 'matrixMeasure' && fieldType === 'measure') {
+      const field = measureFields.find((f) => f.key === fieldKey)
+      if (field) {
+        setMatrixMeasure((prev) => ({
+          field: field.key,
+          agg: prev && field.aggregations.includes(prev.agg) ? prev.agg : field.aggregations[0],
+        }))
+      }
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const zone = event.over?.id
+    const data = event.active.data.current as FieldDragData | undefined
+    if (typeof zone === 'string' && data) addField(zone, data.fieldKey, data.fieldType)
+  }
+
+  // Click fallback: send the field to the slot it most likely belongs in.
+  function handlePaletteAdd(field: Field) {
+    if (type === 'detail') {
+      addField('columns', field.key, field.type)
+    } else if (type === 'summary') {
+      addField(field.type === 'dimension' ? 'groupBy' : 'measures', field.key, field.type)
+    } else if (field.type === 'measure') {
+      addField('matrixMeasure', field.key, field.type)
+    } else if (!matrixRow) {
+      addField('matrixRow', field.key, field.type)
+    } else {
+      addField('matrixCol', field.key, field.type)
+    }
+  }
+
+  function fieldLabel(key: string) {
+    return fieldByKey.get(key)?.label ?? key
+  }
+  function fieldTone(key: string): 'dimension' | 'measure' {
+    return fieldByKey.get(key)?.type === 'measure' ? 'measure' : 'dimension'
   }
 
   function buildDefinition(): ReportDefinition {
@@ -223,7 +297,7 @@ export default function ReportBuilderPage() {
             {editingId ? 'Edit report' : 'Report builder'}
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Compose a report, preview it live, then save it to your library.
+            Drag fields into the report, preview it live, then save it to your library.
           </p>
         </div>
         <Button variant="ghost" onClick={() => navigate('/reports')}>
@@ -231,167 +305,218 @@ export default function ReportBuilderPage() {
         </Button>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
-        {/* Builder panel */}
-        <div className="space-y-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <Select
-            label="Data source"
-            value={sourceKey}
-            onChange={(e) => handleSourceChange(e.target.value)}
-            options={sources.map((s) => ({ value: s.key, label: s.label }))}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,340px)_1fr]">
+          {/* Field palette */}
+          <FieldPalette
+            dimensions={dimensions}
+            measures={measureFields}
+            onAdd={handlePaletteAdd}
           />
 
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Report type
-            </span>
-            <div className="grid grid-cols-3 gap-2">
-              {REPORT_TYPES.map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setType(t.value)}
-                  aria-pressed={type === t.value}
-                  className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
-                    type === t.value
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
-                      : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {REPORT_TYPES.find((t) => t.value === type)?.hint}
-            </p>
-          </div>
+          {/* Builder panel */}
+          <div className="space-y-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <Select
+              label="Data source"
+              value={sourceKey}
+              onChange={(e) => handleSourceChange(e.target.value)}
+              options={sources.map((s) => ({ value: s.key, label: s.label }))}
+            />
 
-          {/* Type-specific configuration */}
-          {type === 'detail' && (
-            <Section label="Columns">
-              <FieldMultiSelect
-                fields={source?.fields.filter((f) => f.type === 'dimension' || f.key !== '__count__') ?? []}
-                selected={columns}
-                onChange={setColumns}
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Report type
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {REPORT_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setType(t.value)}
+                    aria-pressed={type === t.value}
+                    className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
+                      type === t.value
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {REPORT_TYPES.find((t) => t.value === type)?.hint}
+              </p>
+            </div>
+
+            {/* Type-specific drop zones */}
+            {type === 'detail' && (
+              <DropZone
+                id="columns"
+                accepts={['dimension', 'measure']}
+                label="Columns"
+                emptyHint="Drag fields here — each becomes a column."
+                isEmpty={columns.length === 0}
+              >
+                {columns.map((key) => (
+                  <FieldPill
+                    key={key}
+                    label={fieldLabel(key)}
+                    tone={fieldTone(key)}
+                    onRemove={() => setColumns(columns.filter((k) => k !== key))}
+                  />
+                ))}
+              </DropZone>
+            )}
+
+            {type === 'summary' && (
+              <>
+                <DropZone
+                  id="groupBy"
+                  accepts={['dimension']}
+                  label="Group by"
+                  emptyHint="Drag dimensions here to group rows."
+                  isEmpty={groupBy.length === 0}
+                >
+                  {groupBy.map((key) => (
+                    <FieldPill
+                      key={key}
+                      label={fieldLabel(key)}
+                      onRemove={() => setGroupBy(groupBy.filter((k) => k !== key))}
+                    />
+                  ))}
+                </DropZone>
+                <DropZone
+                  id="measures"
+                  accepts={['measure']}
+                  label="Measures"
+                  layout="stack"
+                  emptyHint="Drag measures here to aggregate."
+                  isEmpty={measures.length === 0}
+                >
+                  <MeasureEditor
+                    measureFields={measureFields}
+                    measures={measures}
+                    onChange={setMeasures}
+                  />
+                </DropZone>
+              </>
+            )}
+
+            {type === 'matrix' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <DropZone
+                    id="matrixRow"
+                    accepts={['dimension']}
+                    label="Rows"
+                    emptyHint="Drag a dimension."
+                    isEmpty={!matrixRow}
+                  >
+                    {matrixRow && (
+                      <FieldPill label={fieldLabel(matrixRow)} onRemove={() => setMatrixRow('')} />
+                    )}
+                  </DropZone>
+                  <DropZone
+                    id="matrixCol"
+                    accepts={['dimension']}
+                    label="Columns"
+                    emptyHint="Drag a dimension."
+                    isEmpty={!matrixCol}
+                  >
+                    {matrixCol && (
+                      <FieldPill label={fieldLabel(matrixCol)} onRemove={() => setMatrixCol('')} />
+                    )}
+                  </DropZone>
+                </div>
+                <DropZone
+                  id="matrixMeasure"
+                  accepts={['measure']}
+                  label="Measure"
+                  layout="stack"
+                  emptyHint="Drag a measure to pivot."
+                  isEmpty={!matrixMeasure}
+                >
+                  {matrixMeasure && (
+                    <MatrixMeasurePicker
+                      measureFields={measureFields}
+                      measure={matrixMeasure}
+                      onChange={setMatrixMeasure}
+                    />
+                  )}
+                </DropZone>
+              </>
+            )}
+
+            <Section label="Filters">
+              <FilterEditor
+                fields={source?.fields ?? []}
+                filters={filters}
+                onChange={setFilters}
               />
             </Section>
-          )}
 
-          {type === 'summary' && (
-            <>
-              <Section label="Group by">
-                <FieldMultiSelect
-                  fields={dimensions}
-                  selected={groupBy}
-                  onChange={setGroupBy}
-                />
-              </Section>
-              <Section label="Measures">
-                <MeasureEditor
-                  measureFields={measureFields}
-                  measures={measures}
-                  onChange={setMeasures}
-                />
-              </Section>
-            </>
-          )}
-
-          {type === 'matrix' && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Select
-                  label="Rows"
-                  placeholder="Choose…"
-                  value={matrixRow}
-                  onChange={(e) => setMatrixRow(e.target.value)}
-                  options={dimensions.map((f) => ({ value: f.key, label: f.label }))}
-                />
-                <Select
-                  label="Columns"
-                  placeholder="Choose…"
-                  value={matrixCol}
-                  onChange={(e) => setMatrixCol(e.target.value)}
-                  options={dimensions.map((f) => ({ value: f.key, label: f.label }))}
-                />
-              </div>
-              <Section label="Measure">
-                <MatrixMeasurePicker
-                  measureFields={measureFields}
-                  measure={matrixMeasure}
-                  onChange={setMatrixMeasure}
-                />
-              </Section>
-            </>
-          )}
-
-          <Section label="Filters">
-            <FilterEditor
-              fields={source?.fields ?? []}
-              filters={filters}
-              onChange={setFilters}
-            />
-          </Section>
-
-          <div className="flex items-center gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <Button onClick={handleRun} loading={running} disabled={!validation.ok}>
-              Run report
-            </Button>
-            {!validation.ok && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {validation.message}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Result panel */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1">
-                <TextField
-                  label="Report name"
-                  name="report-name"
-                  placeholder="e.g. Revenue by region"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <Button variant="ghost" onClick={handleSave} loading={saving}>
-                {editingId ? 'Update' : 'Save report'}
+            <div className="flex items-center gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <Button onClick={handleRun} loading={running} disabled={!validation.ok}>
+                Run report
               </Button>
+              {!validation.ok && (
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {validation.message}
+                </span>
+              )}
             </div>
-            {saveMessage && (
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{saveMessage}</p>
-            )}
           </div>
 
-          <div className="min-h-[16rem] rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            {runError ? (
-              <div className="p-5 text-sm text-red-600 dark:text-red-400">{runError}</div>
-            ) : result ? (
-              <div>
-                <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {result.meta.row_count} row{result.meta.row_count === 1 ? '' : 's'}
-                  </span>
-                  {'truncated' in result.meta && result.meta.truncated && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400">
-                      Showing first {result.meta.limit}
-                    </span>
-                  )}
+          {/* Result panel */}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1">
+                  <TextField
+                    label="Report name"
+                    name="report-name"
+                    placeholder="e.g. Revenue by region"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </div>
-                <ResultView result={result} />
+                <Button variant="ghost" onClick={handleSave} loading={saving}>
+                  {editingId ? 'Update' : 'Save report'}
+                </Button>
               </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center p-5 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                Configure the report on the left and press <b className="mx-1">Run report</b> to preview.
-              </div>
-            )}
+              {saveMessage && (
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{saveMessage}</p>
+              )}
+            </div>
+
+            <div className="min-h-[16rem] rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              {runError ? (
+                <div className="p-5 text-sm text-red-600 dark:text-red-400">{runError}</div>
+              ) : result ? (
+                <div>
+                  <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      {result.meta.row_count} row{result.meta.row_count === 1 ? '' : 's'}
+                    </span>
+                    {'truncated' in result.meta && result.meta.truncated && (
+                      <span className="text-xs text-amber-600 dark:text-amber-400">
+                        Showing first {result.meta.limit}
+                      </span>
+                    )}
+                  </div>
+                  <ResultView result={result} />
+                </div>
+              ) : (
+                <div className="flex h-64 items-center justify-center p-5 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  Drag fields in from the left and press <b className="mx-1">Run report</b> to
+                  preview.
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </DndContext>
     </div>
   )
 }
@@ -412,7 +537,7 @@ function MatrixMeasurePicker({
   measure,
   onChange,
 }: {
-  measureFields: import('../types/reports').Field[]
+  measureFields: Field[]
   measure: Measure | null
   onChange: (m: Measure) => void
 }) {
