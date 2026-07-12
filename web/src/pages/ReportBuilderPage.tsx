@@ -15,6 +15,8 @@ import FieldPalette, { type FieldDragData } from '../components/reports/FieldPal
 import FilterEditor from '../components/reports/FilterEditor'
 import MeasureEditor, { aggLabels } from '../components/reports/MeasureEditor'
 import ResultView from '../components/reports/ResultView'
+import ReportChart from '../components/charts/ReportChart'
+import { availableCharts, type ChartKind } from '../components/charts/chartData'
 import {
   createReport,
   fetchDataSources,
@@ -63,6 +65,8 @@ export default function ReportBuilderPage() {
   const [result, setResult] = useState<ReportResult | null>(null)
   const [running, setRunning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
+  const [view, setView] = useState<'table' | 'chart'>('table')
+  const [chartKind, setChartKind] = useState<ChartKind>('bar')
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -241,6 +245,22 @@ export default function ReportBuilderPage() {
     matrixCol,
     matrixMeasure,
   })
+
+  // Which chart kinds the current result supports (empty for detail/no result).
+  const chartKinds = useMemo(
+    () => (result ? availableCharts(result) : []),
+    [result],
+  )
+
+  // Keep the view coherent with the result: fall back to the table when the
+  // result can't be charted, and clamp the chart kind to a supported one.
+  useEffect(() => {
+    if (chartKinds.length === 0) {
+      setView('table')
+    } else if (!chartKinds.includes(chartKind)) {
+      setChartKind(chartKinds[0])
+    }
+  }, [chartKinds, chartKind])
 
   async function handleRun() {
     setRunning(true)
@@ -495,17 +515,62 @@ export default function ReportBuilderPage() {
                 <div className="p-5 text-sm text-red-600 dark:text-red-400">{runError}</div>
               ) : result ? (
                 <div>
-                  <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       {result.meta.row_count} row{result.meta.row_count === 1 ? '' : 's'}
+                      {'truncated' in result.meta && result.meta.truncated && (
+                        <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                          showing first {result.meta.limit}
+                        </span>
+                      )}
                     </span>
-                    {'truncated' in result.meta && result.meta.truncated && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400">
-                        Showing first {result.meta.limit}
-                      </span>
+
+                    {chartKinds.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex rounded-lg border border-zinc-200 p-0.5 dark:border-zinc-700">
+                          {(['table', 'chart'] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setView(v)}
+                              aria-pressed={view === v}
+                              className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition ${
+                                view === v
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                        {view === 'chart' && chartKinds.length > 1 && (
+                          <Select
+                            aria-label="Chart type"
+                            className="min-w-[7rem]"
+                            value={chartKind}
+                            onChange={(e) => setChartKind(e.target.value as ChartKind)}
+                            options={chartKinds.map((k) => ({
+                              value: k,
+                              label: k.charAt(0).toUpperCase() + k.slice(1),
+                            }))}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
-                  <ResultView result={result} />
+
+                  {view === 'chart' && chartKinds.length > 0 ? (
+                    <div className="p-5">
+                      <ReportChart
+                        result={result}
+                        kind={chartKind}
+                        title={name.trim() || 'Report'}
+                      />
+                    </div>
+                  ) : (
+                    <ResultView result={result} />
+                  )}
                 </div>
               ) : (
                 <div className="flex h-64 items-center justify-center p-5 text-center text-sm text-zinc-500 dark:text-zinc-400">

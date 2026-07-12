@@ -2,6 +2,29 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { fetchDataSources, fetchReports } from '../lib/reports'
+import ChartWidget from '../components/charts/ChartWidget'
+import type { ReportDefinition } from '../types/reports'
+
+// Static insight definitions the dashboard runs live against the demo dataset.
+const REVENUE_BY_REGION: ReportDefinition = {
+  data_source: 'deals',
+  type: 'summary',
+  config: {
+    group_by: ['region'],
+    measures: [{ field: 'amount', agg: 'sum' }],
+    filters: [],
+  },
+}
+
+const DEALS_BY_STAGE: ReportDefinition = {
+  data_source: 'deals',
+  type: 'summary',
+  config: {
+    group_by: ['stage'],
+    measures: [{ field: '__count__', agg: 'count' }],
+    filters: [],
+  },
+}
 
 interface Stat {
   label: string
@@ -38,14 +61,14 @@ const roadmap: RoadmapItem[] = [
   {
     slice: 'Slice 4',
     title: 'Charts & dashboards',
-    detail: 'Bar, line, pie and more, with drill-down and dashboard widgets.',
-    status: 'next',
+    detail: 'Bar, line and donut charts on any summary or matrix, plus live dashboard widgets.',
+    status: 'done',
   },
   {
     slice: 'Slice 5',
     title: 'Export, scheduling & sharing',
     detail: 'CSV / Excel / PDF export, scheduled delivery, role-based sharing.',
-    status: 'planned',
+    status: 'next',
   },
 ]
 
@@ -120,6 +143,39 @@ export default function DashboardPage() {
             <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">{stat.hint}</p>
           </div>
         ))}
+      </div>
+
+      <div>
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Live insights
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Rendered from the reporting engine against the demo dataset.
+            </p>
+          </div>
+          <Link
+            to="/builder"
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+          >
+            Open builder →
+          </Link>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChartWidget
+            title="Revenue by region"
+            subtitle="Sum of deal amount"
+            definition={REVENUE_BY_REGION}
+            kind="bar"
+          />
+          <ChartWidget
+            title="Deals by stage"
+            subtitle="Count of deals"
+            definition={DEALS_BY_STAGE}
+            kind="donut"
+          />
+        </div>
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
