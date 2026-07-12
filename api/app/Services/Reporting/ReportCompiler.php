@@ -158,6 +158,7 @@ class ReportCompiler
             $columnMeta[] = [
                 'key' => $measure['alias'],
                 'label' => $measure['label'],
+                'type' => DataSourceRegistry::TYPE_MEASURE,
                 'format' => $measure['format'],
                 'aggregation' => $measure['agg'],
             ];
@@ -252,6 +253,7 @@ class ReportCompiler
             'measure' => [
                 'key' => $measure['alias'],
                 'label' => $measure['label'],
+                'type' => DataSourceRegistry::TYPE_MEASURE,
                 'format' => $measure['format'],
                 'aggregation' => $measure['agg'],
             ],
