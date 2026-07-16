@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { fetchDataSources, fetchReports } from '../lib/reports'
+import { fetchAllSchedules, fetchDataSources, fetchReports } from '../lib/reports'
 import ChartWidget from '../components/charts/ChartWidget'
 import type { ReportDefinition } from '../types/reports'
 
@@ -67,7 +67,13 @@ const roadmap: RoadmapItem[] = [
   {
     slice: 'Slice 5',
     title: 'Export, scheduling & sharing',
-    detail: 'CSV / Excel / PDF export, scheduled delivery, role-based sharing.',
+    detail: 'CSV / Excel / PDF export, scheduled deliveries with run-now, per-user sharing.',
+    status: 'done',
+  },
+  {
+    slice: 'Slice 6',
+    title: 'Hardening & deployment',
+    detail: 'Richer filter tree, live demo deployment, polish.',
     status: 'next',
   },
 ]
@@ -82,15 +88,26 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [reportCount, setReportCount] = useState<number | null>(null)
   const [sourceCount, setSourceCount] = useState<number | null>(null)
+  const [scheduleCount, setScheduleCount] = useState<number | null>(null)
+  const [sharedCount, setSharedCount] = useState<number | null>(null)
 
   // Live counts — the cards reflect the API, not hardcoded numbers.
   useEffect(() => {
     fetchReports()
-      .then((reports) => setReportCount(reports.length))
-      .catch(() => setReportCount(null))
+      .then((reports) => {
+        setReportCount(reports.length)
+        setSharedCount(reports.filter((r) => r.access !== 'owner').length)
+      })
+      .catch(() => {
+        setReportCount(null)
+        setSharedCount(null)
+      })
     fetchDataSources()
       .then((sources) => setSourceCount(sources.length))
       .catch(() => setSourceCount(null))
+    fetchAllSchedules()
+      .then((schedules) => setScheduleCount(schedules.length))
+      .catch(() => setScheduleCount(null))
   }, [])
 
   const stats: Stat[] = [
@@ -104,8 +121,16 @@ export default function DashboardPage() {
       value: sourceCount === null ? '—' : String(sourceCount),
       hint: 'Demo dataset seeded',
     },
-    { label: 'Scheduled deliveries', value: '0', hint: 'Coming in slice 5' },
-    { label: 'Shared with you', value: '0', hint: 'Coming in slice 5' },
+    {
+      label: 'Schedules',
+      value: scheduleCount === null ? '—' : String(scheduleCount),
+      hint: scheduleCount ? 'Delivering on a cadence' : 'Schedule any saved report',
+    },
+    {
+      label: 'Shared with you',
+      value: sharedCount === null ? '—' : String(sharedCount),
+      hint: sharedCount ? 'From teammates' : 'Nothing shared yet',
+    },
   ]
 
   return (

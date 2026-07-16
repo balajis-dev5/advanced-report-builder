@@ -122,6 +122,12 @@ export async function fetchSchedules(reportId: number): Promise<ReportSchedule[]
   return data.data
 }
 
+/** Every schedule the current user owns, across all their reports. */
+export async function fetchAllSchedules(): Promise<ReportSchedule[]> {
+  const { data } = await api.get<{ data: ReportSchedule[] }>('/schedules')
+  return data.data
+}
+
 export async function createSchedule(reportId: number, input: ScheduleInput): Promise<ReportSchedule> {
   const { data } = await api.post<{ data: ReportSchedule }>(`/reports/${reportId}/schedules`, input)
   return data.data
