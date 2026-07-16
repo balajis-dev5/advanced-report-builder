@@ -65,6 +65,14 @@ schedule:work (every minute)
             └─ update last_run_at, compute next_run_at (timezone-aware)
 ```
 
+**As built (slice 5):** the pipeline is the synchronous core of this design —
+`reports:run-scheduled` (hourly via the Laravel scheduler) scans
+`WHERE next_run_at <= now AND is_active`, and `ScheduleDispatcher` exports,
+stores the file, records a `report_deliveries` row, and recomputes
+`next_run_at`. A `POST /schedules/{id}/run` endpoint triggers the same
+dispatcher on demand. Queued jobs, mail transport, and timezone handling are
+the deliberate next steps below.
+
 Design decisions to defend in interviews:
 - **`next_run_at` precomputed column** instead of evaluating cron expressions on scan — the scanner is a single indexed range query.
 - **Queue isolation** — reports run on their own queue so a heavy export can't starve transactional emails.

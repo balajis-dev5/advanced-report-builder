@@ -23,9 +23,9 @@ I build reporting systems professionally for an enterprise CRM. This project is 
 - **Builder UI:** pick module → fields → filters → group-by (multi-level) → aggregates (SUM/AVG/COUNT/MIN/MAX) → sort → chart
 - **Filter engine:** AND/OR condition groups, 15+ operators, absolute dates, relative dates (`last_7_days`, `this_quarter`, `previous_month`), saved filters
 - **Charts:** bar, stacked bar, line, area, pie, donut, funnel, treemap, bubble — one theming layer, drill-down to rows
-- **Scheduling:** daily/weekly/monthly, timezone-aware, email delivery with Excel/PDF attached (queued jobs)
-- **Exports:** Excel / CSV / PDF — chunked + streamed, flat memory on 1M+ rows
-- **Sharing & RBAC:** owner / editor / viewer per report, role-based module access
+- **Scheduling:** daily/weekly/monthly at a chosen hour, run-now, delivery history; files generated & stored, email transport is a documented seam
+- **Exports:** Excel / CSV / PDF — CSV streamed; XLSX is a hand-built SpreadsheetML package (no heavyweight deps); PDF via dompdf
+- **Sharing:** owner / can-edit / can-view per report — enforced server-side, reflected in the UI
 - **Performance:** compiled SQL uses indexes deliberately; N+1-free; EXPLAIN-verified query shapes
 
 ## Tech stack
@@ -56,8 +56,13 @@ working, end-to-end increment.
   touch, live dashboard stats.
 - ✅ **Slice 4 — Charts & dashboards:** dependency-free SVG charts (bar, line,
   donut) driven by any summary or matrix result, a Table/Chart toggle in the
-  builder, and live dashboard chart widgets. *(current)*
-- ⏳ Slices 5–6 — export/scheduling/sharing, richer filter tree, polish.
+  builder, and live dashboard chart widgets.
+- ✅ **Slice 5 — Exports, sharing & scheduling:** CSV / Excel / PDF export of
+  both live previews and saved reports; per-user sharing with view/edit
+  permission (owner-managed, server-enforced); scheduled deliveries
+  (daily/weekly/monthly at a fixed hour) with run-now and a stored delivery
+  history. *(current)*
+- ⏳ Slice 6 — richer filter tree, deployment, polish.
 
 The design sections below (report definition, API surface, schema, folder
 layout) describe the **target architecture** the slices build toward.
@@ -133,9 +138,13 @@ Built in Slices 1–2 (✅) and the target surface for later slices (⏳):
 | ✅ | GET · POST | `/api/reports` | List / create saved reports |
 | ✅ | GET · PUT · DELETE | `/api/reports/{id}` | Show / update / delete a saved report |
 | ✅ | POST | `/api/reports/{id}/run` | Execute a saved report |
-| ⏳ | POST | `/api/reports/{id}/export` | Queue Excel/CSV/PDF export |
-| ⏳ | POST | `/api/reports/{id}/schedules` | Create schedule (freq, time, recipients) |
-| ⏳ | POST | `/api/reports/{id}/share` | Share with user/role + permission |
+| ✅ | POST | `/api/reports/run/export` | Export a live (unsaved) definition as CSV/XLSX/PDF |
+| ✅ | GET | `/api/reports/{id}/export` | Export a saved report (`?format=csv\|xlsx\|pdf`) |
+| ✅ | GET · POST | `/api/reports/{id}/shares` | List / add per-user view/edit grants (owner only) |
+| ✅ | DELETE | `/api/reports/{id}/shares/{user}` | Revoke a grant (owner only) |
+| ✅ | GET · POST | `/api/reports/{id}/schedules` | List / create delivery schedules (owner only) |
+| ✅ | PUT · DELETE | `/api/schedules/{id}` | Update / delete a schedule |
+| ✅ | POST | `/api/schedules/{id}/run` | Generate a delivery immediately |
 
 ## Database schema (core tables)
 
@@ -181,11 +190,11 @@ erDiagram
     }
 ```
 
-> The `report_schedules`, `report_shares` and `report_exports` tables above are
-> **target** schema for Slices 4–5. As of Slice 2 the database ships `users`,
-> `reports` (saved definitions), and a seeded `deals` demo dataset (800 rows) —
-> a single, lightly denormalized fact table the report engine runs against.
-> Additional demo tables (`leads`, `activities`) will arrive as the data-source
+> As of Slice 5 all of the above are real: `report_shares` (per-user view/edit
+> grants), `report_schedules` (frequency, hour, format, recipients, next-run),
+> and `report_deliveries` (the generated-file history — named `report_exports`
+> in the diagram). The demo dataset is a seeded `deals` fact table (800 rows);
+> additional demo tables (`leads`, `activities`) will arrive as the data-source
 > registry grows.
 
 ## Folder structure
@@ -230,8 +239,9 @@ advanced-report-builder/
       compatibility highlighting, click-to-add fallback, live dashboard stats
 - [x] Slice 4 — charts (bar / line / donut) on summary & matrix results, builder
       chart toggle, live dashboard widgets
-- [ ] Slice 5 — CSV / Excel / PDF export, scheduling, sharing & RBAC
-- [ ] Slice 6 — tests, screenshots, Docker deployment, docs site
+- [x] Slice 5 — CSV / Excel / PDF export (live + saved), per-user sharing with
+      view/edit permission, scheduled deliveries with run-now + delivery history
+- [ ] Slice 6 — richer filter tree, deployment, screenshots, polish
 
 ## License
 
