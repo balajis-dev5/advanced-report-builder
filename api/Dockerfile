@@ -4,7 +4,7 @@
 # filesystem, so every fresh deploy starts from a clean, freshly seeded demo
 # database. php artisan serve is the built-in CLI server — plenty for a
 # portfolio demo; swap for FrankenPHP/FPM+nginx before real traffic.
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 
 # ext-zip is the only extension the app needs beyond the image defaults
 # (the XLSX exporter builds its SpreadsheetML package with ZipArchive).
