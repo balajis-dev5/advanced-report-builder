@@ -11,6 +11,9 @@
 ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+**Live demo:** [arb-web-balaji.onrender.com](https://arb-web-balaji.onrender.com) · API: [arb-api-balaji.onrender.com](https://arb-api-balaji.onrender.com/api/health)
+*(Free-tier hosting: the first request after idle can take ~1 min while the container wakes; the demo database reseeds itself on every restart.)*
+
 <!-- [[SCREENSHOT: hero shot of the builder UI with a matrix report + chart preview — see ../../screenshots/SHOTLIST.md]] -->
 
 ## Why this exists
@@ -32,7 +35,7 @@ I build reporting systems professionally for an enterprise CRM. This project is 
 
 | Layer | Choice | Why |
 |---|---|---|
-| API | Laravel 12, PHP 8.3 | Scheduler + queues + Eloquent make report scheduling trivial to operate |
+| API | Laravel 12, PHP 8.4 | Scheduler + queues + Eloquent make report scheduling trivial to operate |
 | SQL compiler | Custom service layer | The core of the project — see ARCHITECTURE.md |
 | Frontend | React 19, TypeScript, Vite | Typed report definitions shared client/server |
 | Data fetching | TanStack Query | Cache + invalidation for preview-as-you-build |
