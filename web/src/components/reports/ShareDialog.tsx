@@ -76,7 +76,7 @@ export default function ShareDialog({
   return (
     <Modal open={open} onClose={onClose} title="Share report">
       <form onSubmit={handleAdd} className="flex items-end gap-2">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <TextField
             label="Person's email"
             name="share-email"
@@ -86,16 +86,17 @@ export default function ShareDialog({
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <Select
-          aria-label="Permission"
-          className="w-28"
-          value={permission}
-          onChange={(e) => setPermission(e.target.value as 'view' | 'edit')}
-          options={[
-            { value: 'view', label: 'Can view' },
-            { value: 'edit', label: 'Can edit' },
-          ]}
-        />
+        <div className="w-28 shrink-0">
+          <Select
+            aria-label="Permission"
+            value={permission}
+            onChange={(e) => setPermission(e.target.value as 'view' | 'edit')}
+            options={[
+              { value: 'view', label: 'Can view' },
+              { value: 'edit', label: 'Can edit' },
+            ]}
+          />
+        </div>
         <Button type="submit" loading={adding} disabled={!email.trim()}>
           Share
         </Button>
