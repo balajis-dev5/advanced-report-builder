@@ -1,0 +1,5 @@
+# Shell scripts must stay LF — they run inside Linux containers where CRLF
+# breaks the shebang and every line ending.
+*.sh text eol=lf
+Dockerfile text eol=lf
+render.yaml text eol=lf
