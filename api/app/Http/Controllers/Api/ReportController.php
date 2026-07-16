@@ -9,6 +9,7 @@ use App\Http\Resources\ReportResource;
 use App\Models\Report;
 use App\Services\Reporting\ReportCompiler;
 use App\Services\Reporting\ReportDefinitionException;
+use App\Support\ReportAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,9 +28,18 @@ class ReportController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $reports = $request->user()->reports()
-            ->latest('updated_at')
-            ->get();
+        $user = $request->user();
+
+        // Reports the user owns, plus reports shared with them — de-duplicated
+        // and newest-first. Shares are eager-loaded so the access label on each
+        // resource resolves without an extra query per row.
+        $owned = $user->reports()->with('shares')->get();
+        $shared = $user->sharedReports()->with(['shares', 'user'])->get();
+
+        $reports = $owned->concat($shared)
+            ->unique('id')
+            ->sortByDesc('updated_at')
+            ->values();
 
         return response()->json(['data' => ReportResource::collection($reports)]);
     }
@@ -43,14 +53,14 @@ class ReportController extends Controller
 
     public function show(Request $request, Report $report): JsonResponse
     {
-        $this->authorizeOwnership($request, $report);
+        abort_unless(ReportAccess::canView($request->user(), $report), 404);
 
         return response()->json(['data' => new ReportResource($report)]);
     }
 
     public function update(SaveReportRequest $request, Report $report): JsonResponse
     {
-        $this->authorizeOwnership($request, $report);
+        abort_unless(ReportAccess::canEdit($request->user(), $report), 404);
 
         $report->update($request->validated());
 
@@ -59,7 +69,8 @@ class ReportController extends Controller
 
     public function destroy(Request $request, Report $report): JsonResponse
     {
-        $this->authorizeOwnership($request, $report);
+        // Only the owner may delete a report — an "edit" share cannot.
+        abort_unless(ReportAccess::canManage($request->user(), $report), 404);
 
         $report->delete();
 
@@ -89,7 +100,7 @@ class ReportController extends Controller
      */
     public function runSaved(Request $request, Report $report): JsonResponse
     {
-        $this->authorizeOwnership($request, $report);
+        abort_unless(ReportAccess::canView($request->user(), $report), 404);
 
         try {
             $result = $this->compiler->run($report->data_source, $report->type, $report->config);
@@ -98,10 +109,5 @@ class ReportController extends Controller
         }
 
         return response()->json(['data' => $result]);
-    }
-
-    private function authorizeOwnership(Request $request, Report $report): void
-    {
-        abort_unless($report->user_id === $request->user()->id, 404);
     }
 }

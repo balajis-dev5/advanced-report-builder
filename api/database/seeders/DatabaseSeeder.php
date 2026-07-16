@@ -24,6 +24,17 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        // A second known account so report sharing is demoable end-to-end
+        // (share demo@arb.test's report with teammate@arb.test, log in as them).
+        User::updateOrCreate(
+            ['email' => 'teammate@arb.test'],
+            [
+                'name' => 'Priya Teammate',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ],
+        );
+
         // A few extra users so lists and "shared with" pickers have data to show.
         if (User::count() < 6) {
             User::factory(5)->create();

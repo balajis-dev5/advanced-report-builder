@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A saved report definition owned by a user.
@@ -44,5 +45,15 @@ class Report extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function shares(): HasMany
+    {
+        return $this->hasMany(ReportShare::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(ReportSchedule::class);
     }
 }
