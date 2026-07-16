@@ -74,12 +74,40 @@ export interface ReportDefinition {
   config: ReportConfig
 }
 
+export type AccessLevel = 'owner' | 'edit' | 'view'
+
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf'
+
 export interface SavedReport extends ReportDefinition {
   id: number
   name: string
   description: string | null
+  access: AccessLevel
+  owner?: { name: string; email: string } | null
   created_at: string
   updated_at: string
+}
+
+export interface ReportShare {
+  user_id: number
+  name: string
+  email: string
+  permission: 'view' | 'edit'
+}
+
+export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly'
+
+export interface ReportSchedule {
+  id: number
+  report_id: number
+  report_name?: string | null
+  frequency: ScheduleFrequency
+  format: ExportFormat
+  hour: number
+  recipients: string[]
+  is_active: boolean
+  last_run_at: string | null
+  next_run_at: string | null
 }
 
 // --- Result shapes ------------------------------------------------------

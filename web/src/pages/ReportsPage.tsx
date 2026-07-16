@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../components/ui/Button'
-import { deleteReport, fetchReports } from '../lib/reports'
+import ExportMenu from '../components/reports/ExportMenu'
+import { deleteReport, exportSaved, fetchReports } from '../lib/reports'
 import type { SavedReport } from '../types/reports'
 
 const typeBadges: Record<string, string> = {
@@ -95,6 +96,12 @@ export default function ReportsPage() {
               >
                 {report.name}
               </Link>
+              {report.access !== 'owner' && (
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Shared by {report.owner?.name ?? 'someone'} ·{' '}
+                  {report.access === 'edit' ? 'can edit' : 'view only'}
+                </p>
+              )}
               {report.description && (
                 <p className="mt-1 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-400">
                   {report.description}
@@ -107,13 +114,19 @@ export default function ReportsPage() {
                 >
                   Open
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(report)}
-                  className="text-sm font-medium text-zinc-500 transition hover:text-red-600 dark:text-zinc-400"
-                >
-                  Delete
-                </button>
+                <ExportMenu
+                  compact
+                  onExport={(format) => exportSaved(report.id, format, report.name)}
+                />
+                {report.access === 'owner' && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(report)}
+                    className="text-sm font-medium text-zinc-500 transition hover:text-red-600 dark:text-zinc-400"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </li>
           ))}

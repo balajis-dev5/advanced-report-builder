@@ -11,20 +11,25 @@ import Button from '../components/ui/Button'
 import Select from '../components/ui/Select'
 import TextField from '../components/ui/TextField'
 import DropZone, { FieldPill } from '../components/reports/DropZone'
+import ExportMenu from '../components/reports/ExportMenu'
 import FieldPalette, { type FieldDragData } from '../components/reports/FieldPalette'
 import FilterEditor from '../components/reports/FilterEditor'
 import MeasureEditor, { aggLabels } from '../components/reports/MeasureEditor'
 import ResultView from '../components/reports/ResultView'
+import ScheduleDialog from '../components/reports/ScheduleDialog'
+import ShareDialog from '../components/reports/ShareDialog'
 import ReportChart from '../components/charts/ReportChart'
 import { availableCharts, type ChartKind } from '../components/charts/chartData'
 import {
   createReport,
+  exportRun,
   fetchDataSources,
   fetchReport,
   runReport,
   updateReport,
 } from '../lib/reports'
 import type {
+  AccessLevel,
   DataSource,
   Field,
   Filter,
@@ -72,6 +77,13 @@ export default function ReportBuilderPage() {
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+  // Slice 5: what the current user may do with a loaded report, plus the
+  // share/schedule dialogs (owner-only — the server enforces this too).
+  const [access, setAccess] = useState<AccessLevel>('owner')
+  const [ownerName, setOwnerName] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
 
   // A click on a palette chip must stay a click; dragging starts only after
   // the pointer travels a little, so both interactions coexist on one element.
@@ -124,6 +136,8 @@ export default function ReportBuilderPage() {
           hydrateConfig(loaded.config)
           setName(loaded.name)
           setDescription(loaded.description ?? '')
+          setAccess(loaded.access)
+          setOwnerName(loaded.owner?.name ?? null)
         } else {
           setSourceKey(loadedSources[0]?.key ?? '')
         }
@@ -320,9 +334,21 @@ export default function ReportBuilderPage() {
             Drag fields into the report, preview it live, then save it to your library.
           </p>
         </div>
-        <Button variant="ghost" onClick={() => navigate('/reports')}>
-          ← My reports
-        </Button>
+        <div className="flex items-center gap-2">
+          {editingId && access === 'owner' && (
+            <>
+              <Button variant="ghost" onClick={() => setShareOpen(true)}>
+                Share
+              </Button>
+              <Button variant="ghost" onClick={() => setScheduleOpen(true)}>
+                Schedule
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" onClick={() => navigate('/reports')}>
+            ← My reports
+          </Button>
+        </div>
       </header>
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -501,10 +527,18 @@ export default function ReportBuilderPage() {
                     onChange={(e) => setName(e.target.value)}
                   />
                 </div>
-                <Button variant="ghost" onClick={handleSave} loading={saving}>
-                  {editingId ? 'Update' : 'Save report'}
-                </Button>
+                {access !== 'view' && (
+                  <Button variant="ghost" onClick={handleSave} loading={saving}>
+                    {editingId ? 'Update' : 'Save report'}
+                  </Button>
+                )}
               </div>
+              {access === 'view' && (
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  View only — shared by {ownerName ?? 'the owner'}. You can run and export it,
+                  but not change it.
+                </p>
+              )}
               {saveMessage && (
                 <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{saveMessage}</p>
               )}
@@ -525,8 +559,14 @@ export default function ReportBuilderPage() {
                       )}
                     </span>
 
-                    {chartKinds.length > 0 && (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <ExportMenu
+                        onExport={(format) =>
+                          exportRun(buildDefinition(), format, name.trim() || 'report')
+                        }
+                      />
+                      {chartKinds.length > 0 && (
+                        <>
                         <div className="inline-flex rounded-lg border border-zinc-200 p-0.5 dark:border-zinc-700">
                           {(['table', 'chart'] as const).map((v) => (
                             <button
@@ -556,8 +596,9 @@ export default function ReportBuilderPage() {
                             }))}
                           />
                         )}
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {view === 'chart' && chartKinds.length > 0 ? (
@@ -582,6 +623,21 @@ export default function ReportBuilderPage() {
           </div>
         </div>
       </DndContext>
+
+      {editingId && access === 'owner' && (
+        <>
+          <ShareDialog
+            reportId={editingId}
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+          />
+          <ScheduleDialog
+            reportId={editingId}
+            open={scheduleOpen}
+            onClose={() => setScheduleOpen(false)}
+          />
+        </>
+      )}
     </div>
   )
 }
